@@ -1,0 +1,7 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <div class="p-5 bg-white rounded">
+    <h1>Welcome to Expense Tracker</h1>
+    <p class="lead">Simple personal expense manager. Please <a href="{{ url_for('login') }}">login</a> or <a href="{{ url_for('register') }}">register</a>.</p>
+  </div>
+{% endblock %}

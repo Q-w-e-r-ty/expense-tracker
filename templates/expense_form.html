@@ -1,0 +1,33 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <div class="card">
+    <div class="card-body">
+      <h4 class="card-title">{{ action }} Expense</h4>
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">Amount</label>
+          <input class="form-control" name="amount" value="{{ expense.amount if expense else '' }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Date</label>
+          <input class="form-control" name="date" placeholder="YYYY-MM-DD" value="{{ expense.date if expense else '' }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Category</label>
+          <select class="form-select" name="category" required>
+            <option value="">-- choose --</option>
+            {% for c in categories %}
+              <option value="{{ c }}" {% if expense and expense.category==c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Description</label>
+          <input class="form-control" name="description" value="{{ expense.description if expense else '' }}">
+        </div>
+        <button class="btn btn-primary">{{ action }}</button>
+        <a class="btn btn-link" href="{{ url_for('expenses') }}">Cancel</a>
+      </form>
+    </div>
+  </div>
+{% endblock %}

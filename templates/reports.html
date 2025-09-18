@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+{% block content %}
+  <h3>Reports</h3>
+  <div class="mb-4">
+    <h5>Monthly Spending</h5>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr><th>Month</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for row in monthly %}
+          <tr>
+            <td>{{ row.month }}</td>
+            <td>{{ '%.2f'|format(row.amount) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div>
+    <h5>Category Distribution</h5>
+    <table class="table table-sm table-bordered">
+      <thead>
+        <tr><th>Category</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for row in categories %}
+          <tr>
+            <td>{{ row.category }}</td>
+            <td>{{ '%.2f'|format(row.amount) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <a class="btn btn-link" href="{{ url_for('expenses') }}">Back</a>
+{% endblock %}
