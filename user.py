@@ -1,132 +1,88 @@
+# -------------------- user.py --------------------
 """
 user.py
-
-
-Defines User and UserManager. Uses salted SHA-256 for password storage.
-
-
-users.csv columns: user_id,username,hashed_password
-
-
-hashed_password format: salt$sha256hex
+Manages user creation and authentication. Uses salted SHA-256 for password storage.
+users.csv fields: user_id,username,hashed_password
+hashed_password format stored: salt$sha256_hex
 """
-
 
 import csv
 import os
 import hashlib
-import binascii
-from dataclasses import dataclass
-from typing import Optional, List
-
+import secrets
+from typing import Optional
 
 USERS_CSV = 'users.csv'
 
-
-
-
-@dataclass
 class User:
-    user_id: int
-    username: str
-    hashed_password: str # stored as salt$hexhash
-
-
+    def __init__(self, user_id: str, username: str, hashed_password: str):
+        self.user_id = user_id
+        self.username = username
+        self.hashed_password = hashed_password
 
 
 class UserManager:
     def __init__(self, path: str = USERS_CSV):
         self.path = path
-        self.users: List[User] = []
-        self._ensure_file()
-        self._load()
-
-
-    def _ensure_file(self):
+        # Ensure file exists with header
         if not os.path.exists(self.path):
             with open(self.path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(['user_id', 'username', 'hashed_password'])
 
-
-    def _load(self):
-        self.users = []
-        try:
-            with open(self.path, newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for r in reader:
-                    self.users.append(User(int(r['user_id']), r['username'], r['hashed_password']))
-        except FileNotFoundError:
-            self._ensure_file()
-
-
-    def _save(self):
-        with open(self.path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['user_id', 'username', 'hashed_password'])
-            for u in self.users:
-                writer.writerow([u.user_id, u.username, u.hashed_password])
-                print('Users loaded:', len(um.users))
-
-    def _hash_password(self, password: str, salt: Optional[bytes] = None) -> str:
+    def _hash_password(self, password: str, salt: Optional[str] = None) -> str:
+        """Return salted sha256 in the form salt$hash"""
         if salt is None:
-            salt = os.urandom(16)
-            pwd = password.encode('utf-8')
-            dk = hashlib.pbkdf2_hmac('sha256', pwd, salt, 100_000)
-        return binascii.hexlify(salt).decode() + '$' + binascii.hexlify(dk).decode()
+            salt = secrets.token_hex(16)
+        h = hashlib.sha256()
+        h.update((salt + password).encode('utf-8'))
+        return f"{salt}${h.hexdigest()}"
 
-
-    def _verify_password(self, stored: str, provided: str) -> bool:
+    def _verify_password(self, password: str, stored: str) -> bool:
         try:
-            salt_hex, hash_hex = stored.split('$')
-            salt = binascii.unhexlify(salt_hex)
-            provided_hash = hashlib.pbkdf2_hmac('sha256', provided.encode('utf-8'), salt, 100_000)
-            return binascii.hexlify(provided_hash).decode() == hash_hex
-        except Exception:
+            salt, h = stored.split('$')
+        except ValueError:
             return False
+        return self._hash_password(password, salt) == stored
 
+    def _load_all_users(self) -> list:
+        users = []
+        with open(self.path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                users.append(User(r['user_id'], r['username'], r['hashed_password']))
+        return users
 
-    def find_by_username(self, username: str) -> Optional[User]:
-        for u in self.users:
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        for u in self._load_all_users():
             if u.username == username:
                 return u
         return None
 
-
     def create_user(self, username: str, password: str) -> User:
-    # username uniqueness
-        if self.find_by_username(username):
+        # Basic username existence check
+        if self.get_user_by_username(username) is not None:
             raise ValueError('Username already exists')
-        next_id = max([u.user_id for u in self.users], default=0) + 1
+
+        # Generate a new user_id (sequential integer as string)
+        users = self._load_all_users()
+        if not users:
+            next_id = 1
+        else:
+            ids = [int(u.user_id) for u in users]
+            next_id = max(ids) + 1
         hashed = self._hash_password(password)
-        user = User(next_id, username, hashed)
-        self.users.append(user)
-        self._save()
+        user = User(str(next_id), username, hashed)
+
+        # Append to CSV immediately
+        with open(self.path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([user.user_id, user.username, user.hashed_password])
+
         return user
 
-
     def authenticate(self, username: str, password: str) -> Optional[User]:
-        user = self.find_by_username(username)
-        if not user:
-            return None
-        if self._verify_password(user.hashed_password, password):
+        user = self.get_user_by_username(username)
+        if user and self._verify_password(password, user.hashed_password):
             return user
         return None
-
-
-    @staticmethod
-    def validate_password_rules(password: str) -> bool:
-    # at least 8 chars, one uppercase, one lowercase, one digit
-        if len(password) < 8:
-            return False
-        has_upper = any(c.isupper() for c in password)
-        has_lower = any(c.islower() for c in password)
-        has_digit = any(c.isdigit() for c in password)
-        return has_upper and has_lower and has_digit
-
-
-
-
-if __name__ == '__main__':
-    um = UserManager()
-    print('Users loaded:', len(um.users))

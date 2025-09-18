@@ -1,124 +1,139 @@
-
+# -------------------- expense.py --------------------
 """
 expense.py
+Manages expenses stored in expenses.csv with fields:
+expense_id, user_id, amount, date, category, description
 
-Defines Expense and ExpenseManager which reads/writes expenses.csv.
-
-expenses.csv columns: expense_id,user_id,amount,date,category,description
-
-expense_id is per-user sequential starting at 1.
+- expense_id is an integer starting at 1 per user
+- composite key: user_id + expense_id
 """
 
 import csv
 import os
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import List, Dict, Optional
 
 EXPENSES_CSV = 'expenses.csv'
 
-VALID_CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Shopping', 'Other']
+CATEGORIES = ['Food', 'Transport', 'Rent', 'Utilities', 'Shopping', 'Other']
 
-
-@dataclass
 class Expense:
-    expense_id: int  # sequential per user
-    user_id: int
-    amount: float
-    date: str  # YYYY-MM-DD
-    category: str
-    description: str
+    def __init__(self, expense_id: str, user_id: str, amount: float, date: str, category: str, description: str):
+        self.expense_id = expense_id
+        self.user_id = user_id
+        self.amount = float(amount)
+        self.date = date  # YYYY-MM-DD
+        self.category = category
+        self.description = description
+
+    def to_dict(self) -> Dict:
+        return {
+            'expense_id': str(self.expense_id),
+            'user_id': str(self.user_id),
+            'amount': f"{self.amount:.2f}",
+            'date': self.date,
+            'category': self.category,
+            'description': self.description,
+        }
 
 
 class ExpenseManager:
     def __init__(self, path: str = EXPENSES_CSV):
         self.path = path
-        self.expenses: List[Expense] = []
-        self._ensure_file()
-        self._load()
-
-    def _ensure_file(self):
         if not os.path.exists(self.path):
             with open(self.path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(['expense_id', 'user_id', 'amount', 'date', 'category', 'description'])
 
-    def _load(self):
-        self.expenses = []
-        try:
-            with open(self.path, newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for r in reader:
-                    self.expenses.append(Expense(int(r['expense_id']), int(r['user_id']), float(r['amount']), r['date'], r['category'], r['description']))
-        except FileNotFoundError:
-            self._ensure_file()
+    def _load_all(self) -> List[Expense]:
+        expenses = []
+        with open(self.path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                try:
+                    expenses.append(Expense(r['expense_id'], r['user_id'], float(r['amount']), r['date'], r['category'], r['description']))
+                except Exception:
+                    continue
+        return expenses
 
-    def _save(self):
+    def _write_all(self, expenses: List[Expense]):
         with open(self.path, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['expense_id', 'user_id', 'amount', 'date', 'category', 'description'])
-            for e in self.expenses:
-                writer.writerow([e.expense_id, e.user_id, f'{e.amount:.2f}', e.date, e.category, e.description])
+            fieldnames = ['expense_id', 'user_id', 'amount', 'date', 'category', 'description']
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            for e in expenses:
+                writer.writerow(e.to_dict())
 
-    def list_user_expenses(self, user_id: int) -> List[Expense]:
+    def list_for_user(self, user_id: str) -> List[Expense]:
+        all_exp = self._load_all()
+        user_exp = [e for e in all_exp if e.user_id == str(user_id)]
         # chronological order by date
-        user_exp = [e for e in self.expenses if e.user_id == user_id]
-        user_exp.sort(key=lambda x: x.date)
+        user_exp.sort(key=lambda x: datetime.strptime(x.date, '%Y-%m-%d'))
         return user_exp
 
-    def next_expense_id_for_user(self, user_id: int) -> int:
-        ids = [e.expense_id for e in self.expenses if e.user_id == user_id]
-        return max(ids, default=0) + 1
+    def _next_expense_id_for_user(self, user_id: str) -> int:
+        user_exp = [int(e.expense_id) for e in self._load_all() if e.user_id == str(user_id)]
+        return max(user_exp) + 1 if user_exp else 1
 
-    def add_expense(self, user_id: int, amount: float, date: str, category: str, description: str) -> Expense:
-        if category not in VALID_CATEGORIES:
+    def add_expense(self, user_id: str, amount: float, date: str, category: str, description: str) -> Expense:
+        # Validate category
+        if category not in CATEGORIES:
             raise ValueError('Invalid category')
-        eid = self.next_expense_id_for_user(user_id)
-        exp = Expense(eid, user_id, amount, date, category, description)
-        self.expenses.append(exp)
-        self._save()
+        # Validate date format
+        datetime.strptime(date, '%Y-%m-%d')
+        if amount <= 0:
+            raise ValueError('Amount must be positive')
+
+        eid = self._next_expense_id_for_user(user_id)
+        exp = Expense(str(eid), str(user_id), amount, date, category, description)
+        all_exp = self._load_all()
+        all_exp.append(exp)
+        self._write_all(all_exp)
         return exp
 
-    def find_expense(self, user_id: int, expense_id: int) -> Optional[Expense]:
-        for e in self.expenses:
-            if e.user_id == user_id and e.expense_id == expense_id:
+    def find_expense(self, user_id: str, expense_id: str) -> Optional[Expense]:
+        for e in self._load_all():
+            if e.user_id == str(user_id) and e.expense_id == str(expense_id):
                 return e
         return None
 
-    def edit_expense(self, user_id: int, expense_id: int, **kwargs) -> Expense:
-        exp = self.find_expense(user_id, expense_id)
-        if not exp:
-            raise ValueError('Expense not found')
-        # editable fields: amount, date, category, description
-        if 'amount' in kwargs:
-            exp.amount = float(kwargs['amount'])
-        if 'date' in kwargs:
-            exp.date = kwargs['date']
-        if 'category' in kwargs:
-            if kwargs['category'] not in VALID_CATEGORIES:
-                raise ValueError('Invalid category')
-            exp.category = kwargs['category']
-        if 'description' in kwargs:
-            exp.description = kwargs['description']
-        self._save()
-        return exp
+    def edit_expense(self, user_id: str, expense_id: str, **kwargs) -> Expense:
+        all_exp = self._load_all()
+        found = False
+        for e in all_exp:
+            if e.user_id == str(user_id) and e.expense_id == str(expense_id):
+                found = True
+                if 'amount' in kwargs:
+                    if float(kwargs['amount']) <= 0:
+                        raise ValueError('Amount must be positive')
+                    e.amount = float(kwargs['amount'])
+                if 'date' in kwargs:
+                    datetime.strptime(kwargs['date'], '%Y-%m-%d')
+                    e.date = kwargs['date']
+                if 'category' in kwargs:
+                    if kwargs['category'] not in CATEGORIES:
+                        raise ValueError('Invalid category')
+                    e.category = kwargs['category']
+                if 'description' in kwargs:
+                    e.description = kwargs['description']
+                break
+        if not found:
+            raise KeyError('Expense not found')
+        self._write_all(all_exp)
+        return e
 
-    def delete_expense(self, user_id: int, expense_id: int) -> bool:
-        exp = self.find_expense(user_id, expense_id)
-        if not exp:
+    def delete_expense(self, user_id: str, expense_id: str) -> bool:
+        all_exp = self._load_all()
+        new_list = [e for e in all_exp if not (e.user_id == str(user_id) and e.expense_id == str(expense_id))]
+        if len(new_list) == len(all_exp):
             return False
-        self.expenses.remove(exp)
-        self._save()
+        self._write_all(new_list)
         return True
 
-    def export_user_expenses(self, user_id: int, filepath: str):
-        user_expenses = self.list_user_expenses(user_id)
-        with open(filepath, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['expense_id', 'user_id', 'amount', 'date', 'category', 'description'])
-            for e in user_expenses:
-                writer.writerow([e.expense_id, e.user_id, f'{e.amount:.2f}', e.date, e.category, e.description])
-
-
-if __name__ == '__main__':
-    em = ExpenseManager()
-    print('Expenses loaded:', len(em.expenses))
+    def export_user_expenses(self, user_id: str, out_path: str):
+        user_exp = self.list_for_user(user_id)
+        with open(out_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=['expense_id', 'user_id', 'amount', 'date', 'category', 'description'])
+            writer.writeheader()
+            for e in user_exp:
+                writer.writerow(e.to_dict())
