@@ -13,6 +13,12 @@ import base64
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret')
 
+# Serve the project-root image at a predictable URL so templates can reference it.
+@app.route('/static/expense_photo.jpeg')
+def expense_photo():
+    # serve the bundled image file from the project root
+    return send_file(os.path.join(os.path.dirname(__file__), 'expense_photo.jpeg'))
+
 UM = UserManager()
 EM = ExpenseManager()
 
