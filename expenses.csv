@@ -1,3 +1,21 @@
 expense_id,user_id,amount,date,category,description
-1,1,590.00,2024-04-04,Transport,Uber 
-2,1,590.00,2023-04-04,Transport,Uber 
+1,1,590.00,2024-04-03,Transport,Uber
+2,1,590.00,2024-04-04,Transport,Uber
+3,1,1200.50,2024-05-10,Food,Domino's Pizza
+4,1,300.00,2024-05-12,Entertainment,Netflix Subscription
+5,1,4500.00,2024-06-01,Shopping,Zara Clothing
+6,1,220.00,2024-06-15,Transport,Metro Card Recharge
+7,1,999.00,2024-07-05,Utilities,Electricity Bill
+8,1,150.00,2024-07-07,Food,Coffee at Starbucks
+9,1,2000.00,2024-08-02,Health,Gym Membership
+10,1,750.00,2024-08-15,Entertainment,Concert Ticket
+11,1,3100.00,2024-09-03,Shopping,Amazon Order
+12,1,180.00,2024-09-10,Food,Subway Sandwich
+13,1,560.00,2024-10-01,Transport,Uber
+14,1,2200.00,2024-10-05,Travel,Flight to Goa
+15,1,1350.00,2024-11-12,Utilities,Internet Bill
+16,1,400.00,2024-11-18,Food,KFC Dinner
+17,1,2999.00,2024-12-01,Electronics,Headphones
+18,1,120.00,2024-12-15,Food,Tea & Snacks
+19,1,520.00,2025-01-07,Transport,Uber
+20,1,14500.00,2025-02-10,Travel,Hotel Booking
