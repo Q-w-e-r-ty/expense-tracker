@@ -6,6 +6,11 @@
     <title>Expense Tracker</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <style>
+      /* App color palette */
+      :root {
+        --app-blue: #0d6efd; /* default Bootstrap blue, change here to update all blues */
+        --app-link: var(--app-blue);
+      }
       /* background image class uses Flask route; keep it in the head to avoid inline quoting issues */
       .bg-photo {
         background-size: cover;
@@ -22,19 +27,29 @@
       }
       .table th,
       .table td {
-        background-color: transparent !important;
+        /* 50% white background for cells (text remains opaque) */
+        background-color: rgba(255,255,255,0.3) !important;
       }
 
       /* Remove any Bootstrap striped backgrounds so all rows are transparent */
       .table.table-striped > tbody > tr:nth-of-type(odd),
       .table.table-striped > tbody > tr:nth-of-type(even) {
-        background-color: transparent !important;
+        background-color: rgba(255,255,255,0.3) !important;
       }
 
       /* Extra aggressive overrides: clear any background-image and Bootstrap variables */
       .table, .table thead, .table tbody, .table tr, .table th, .table td {
         background-image: none !important;
-        background-color: transparent !important;
+        /* if you want uniform 50% transparency everywhere */
+        background-color: rgba(255,255,255,0.3) !important;
+      }
+
+      /* Header row container (Add/Export/Reports/Visualize) styling to match table transparency */
+      .d-flex.justify-content-between.align-items-center.mb-3 {
+        background-color: rgba(255,255,255,0.3) !important;
+        padding: 0.75rem 1rem;
+        border-radius: 0.25rem;
+        margin-bottom: 0 !important;
       }
       /* override Bootstrap CSS variables used for striped/hover/etc */
       :root, body {
@@ -43,16 +58,74 @@
         --bs-table-hover-bg: transparent;
       }
 
+      /* Use app blue for primary buttons and links so all blues match */
+      .btn-primary,
+      a.btn-primary {
+        background-color: var(--app-blue) !important;
+        border-color: var(--app-blue) !important;
+      }
+      /* Ensure danger buttons (logout) have white text */
+      .btn-danger {
+        color: #fff !important;
+      }
+      /* outline style that uses app blue for border and hover */
+      .btn-outline-app {
+        color: var(--app-blue) !important;
+        border: 1px solid var(--app-blue) !important;
+        background-color: transparent !important;
+      }
+      .btn-outline-app:hover, .btn-outline-app:focus {
+        background-color: var(--app-blue) !important;
+        color: #fff !important;
+        border-color: var(--app-blue) !important;
+      }
+      /* Ensure existing outline-info also matches app-blue on hover */
+      .btn-outline-info:hover, .btn-outline-info:focus {
+        background-color: var(--app-blue) !important;
+        color: #fff !important;
+        border-color: var(--app-blue) !important;
+      }
+      /* white button style for 'Add' */
+      .btn-white {
+        background-color: #ffffff !important;
+        color: #000 !important;
+        border: 1px solid #ddd !important;
+      }
+      /* make outline-info use the same app blue for border/text */
+      .btn-outline-info {
+        color: var(--app-blue) !important;
+        border-color: var(--app-blue) !important;
+      }
+      a {
+        color: var(--app-link) !important;
+      }
+
+      /* Make the navbar sticky */
+      .navbar {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1030; /* Ensure it stays above other elements */
+      }
+
+      /* Add padding to the body to prevent the navbar from overlapping content */
+      body {
+        padding-top: 2rem; /* Adjust based on navbar height */
+      }
+
     </style>
   </head>
   <body class="bg-light bg-photo">
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom" style="background-color: rgba(255,255,255,0.85);">
+      <div>
+        {% block navbar_buttons %}{% endblock %}
+      </div>
       <div class="container">
         <a class="navbar-brand" href="{{ url_for('index') }}">Expense Tracker</a>
         <div>
           {% if session.get('username') %}
             <span class="me-2">Hello, {{ session.username }}</span>
-            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('logout') }}">Logout</a>
+            <a class="btn btn-sm btn-danger" href="{{ url_for('logout') }}">Logout</a>
           {% else %}
             <a class="btn btn-sm btn-outline-primary" href="{{ url_for('login') }}">Login</a>
             <a class="btn btn-sm btn-outline-success" href="{{ url_for('register') }}">Register</a>
@@ -62,18 +135,18 @@
     </nav>
     <div class="container mt-4">
       <!-- keep flash messages inside a semi-opaque overlay for readability -->
-      <div style="background-color: rgba(255, 255, 255, 0.637); padding: 1rem; border-radius: 0.25rem;">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          {% for category, msg in messages %}
-            <div class="alert alert-{{ 'info' if category=='info' else category }}">{{ msg }}</div>
-          {% endfor %}
+          <div style="background-color: rgba(255, 255, 255, 0.3); padding: 1rem; border-radius: 0.25rem;">
+            {% for category, msg in messages %}
+              <div class="alert alert-{{ 'info' if category=='info' else category }}">{{ msg }}</div>
+            {% endfor %}
+          </div>
         {% endif %}
       {% endwith %}
-      </div>
 
       <!-- main content rendered here so elements like tables sit directly on the background -->
-      <div class="mt-3">
+      <div class="mt-3" style="background-color: rgba(255, 255, 255, 0.7); padding: 1rem; border-radius: 0.25rem;">
         {% block content %}{% endblock %}
       </div>
     </div>

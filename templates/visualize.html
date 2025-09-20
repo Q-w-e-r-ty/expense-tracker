@@ -11,5 +11,7 @@
       <img src="{{ category_img }}" alt="Category distribution chart" class="img-fluid" />
     </div>
   </div>
-  <a class="btn btn-link" href="{{ url_for('expenses') }}">Back</a>
+{% endblock %}
+{% block navbar_buttons %}
+  <a style="margin-left: 8px;" class="btn btn-sm btn-outline-app" href="{{ url_for('expenses') }}">Back</a>
 {% endblock %}
